@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Milkshake machine</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bungee&display=swap">
+<style>
+:root {
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  color-scheme: light dark;
+  --wall: #bfe8e1; --grout: #9fd0c7; --card: rgba(255,250,242,.94); --ink: #3b1f2b; --muted: #7a5565; --line: #e3b9c6; --glass: #5f8499;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --wall: #1b3a3f; --grout: #14292d; --card: rgba(29,21,34,.94); --ink: #fbeaf0; --muted: #c4a3b3; --line: #4a3450; --glass: #a9c9dc; }
+}
+:root[data-theme="dark"] { color-scheme: dark; --wall: #1b3a3f; --grout: #14292d; --card: rgba(29,21,34,.94); --ink: #fbeaf0; --muted: #c4a3b3; --line: #4a3450; --glass: #a9c9dc; }
+html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+body {
+  margin: 0; background-color: var(--wall); color: var(--ink); position: relative; isolation: isolate;
+  background-image: linear-gradient(var(--grout) 2px, transparent 2px), linear-gradient(90deg, var(--grout) 2px, transparent 2px);
+  background-size: 44px 44px;
+  font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+  display: flex; flex-direction: column; align-items: center;
+  min-height: 100vh; padding: 28px 18px 40px;
+}
+body::before { content: ""; position: fixed; left: 0; right: 0; bottom: 16vh; height: 16px; z-index: -1; background: linear-gradient(#fff 0 3px, #d7263d 3px 13px, #fff 13px); }
+body::after { content: ""; position: fixed; left: 0; right: 0; bottom: 0; height: 16vh; z-index: -1; background: conic-gradient(#1b1b1f 25%, #f5f5f5 0 50%, #1b1b1f 0 75%, #f5f5f5 0) 0 0 / 56px 56px; }
+.sign { font: 400 clamp(1.5rem, 6.5vw, 2.4rem)/1 "Bungee", Impact, "Arial Black", sans-serif; color: #ff7ab8; background: #2a1130; border: 3px solid #ff7ab8; border-radius: 16px; padding: 10px 20px; margin: 0 0 14px; text-shadow: 0 0 6px #ff4f9f, 0 0 16px #ff4f9f; box-shadow: 0 0 10px #ff4f9f, inset 0 0 10px rgba(255,79,159,.6); }
+h1 { font: 400 clamp(1.1rem, 4vw, 1.5rem)/1.1 "Bungee", Impact, "Arial Black", sans-serif; margin: 0 0 6px; text-align: center; }
+.hint { margin: 0 0 8px; color: var(--ink); text-align: center; max-width: 34ch; }
+.counter { position: relative; z-index: 0; width: min(92vw, 440px); height: 36px; margin-top: calc(min(78vw, 300px) * -0.058); border-radius: 8px 8px 0 0; background: linear-gradient(#fafafa 0 9px, #b8bcc4 9px 12px, #d7263d 12px); box-shadow: 0 4px 0 rgba(0,0,0,.18); }
+.card { background: var(--card); border: 2px solid var(--line); border-radius: 16px; padding: 14px 18px 18px; margin-top: 18px; width: 100%; max-width: 460px; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; }
+svg { position: relative; z-index: 1; width: min(78vw, 300px); height: auto; display: block; overflow: visible; }
+.slide { transition: transform .45s ease; }
+.fill { fill: var(--shake); transition: fill .25s; }
+.fill2 { fill: var(--shake2); transition: fill .25s; }
+.status { min-height: 1.5em; margin: 6px 0 16px; font-weight: 600; text-align: center; }
+.row { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; max-width: 420px; }
+button {
+  font: inherit; color: var(--ink); background: transparent; cursor: pointer;
+  border: 2px solid var(--line); border-radius: 10px; padding: 9px 14px; min-height: 44px;
+  display: inline-flex; align-items: center; gap: 8px;
+}
+button:hover { border-color: var(--ink); }
+button:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
+button[aria-pressed="true"] { border-color: var(--ink); }
+.dot { width: 14px; height: 14px; border-radius: 50%; border: 1px solid rgba(0,0,0,.25); }
+.key { font: 700 .85em ui-monospace, Menlo, Consolas, monospace; opacity: .7; }
+.sip { margin-top: 12px; border-style: dashed; }
+@media (prefers-reduced-motion: reduce) { .slide, .fill, .fill2 { transition: none; } }
+</style>
+</head>
+<body>
+<div class="sign">For Gigi &lt;3</div>
+<h1>Milkshake machine</h1>
+<p class="hint">Pick a flavor with v, c, s or m, then sip with the space bar.</p>
+<svg id="shake" viewBox="0 0 240 340" role="img" aria-label="A milkshake in a tall glass with whipped cream, a cherry and a straw">
+  <defs>
+    <clipPath id="inside"><polygon points="50,-120 190,-120 190,120 165,290 75,290 50,120"/></clipPath>
+    <clipPath id="glassOnly"><polygon points="50,120 190,120 165,290 75,290"/></clipPath>
+  </defs>
+  <ellipse cx="120" cy="326" rx="52" ry="9" fill="var(--glass)" opacity=".5"/>
+  <rect x="113" y="290" width="14" height="30" fill="var(--glass)" opacity=".6"/>
+  <g clip-path="url(#glassOnly)">
+    <g class="slide" id="liquid">
+      <rect class="fill" x="40" y="120" width="160" height="200"/>
+      <rect class="fill2" x="40" y="215" width="160" height="105" opacity=".35"/>
+      <ellipse class="fill2" cx="120" cy="120" rx="75" ry="8"/>
+    </g>
+  </g>
+  <g clip-path="url(#inside)">
+    <g class="slide" id="topping">
+      <ellipse cx="120" cy="112" rx="72" ry="22" fill="#fffaf2" stroke="#e8d9c4" stroke-width="2"/>
+      <ellipse cx="120" cy="92" rx="54" ry="18" fill="#fffaf2" stroke="#e8d9c4" stroke-width="2"/>
+      <ellipse cx="120" cy="74" rx="36" ry="15" fill="#fffaf2" stroke="#e8d9c4" stroke-width="2"/>
+      <path d="M104 68 Q120 38 136 68 Z" fill="#fffaf2" stroke="#e8d9c4" stroke-width="2"/>
+      <circle cx="90" cy="108" r="2.5" fill="#ff5d8f"/><circle cx="150" cy="100" r="2.5" fill="#4dbb8f"/>
+      <circle cx="120" cy="116" r="2.5" fill="#ffb627"/><circle cx="106" cy="88" r="2.5" fill="#5b8def"/>
+      <circle cx="136" cy="90" r="2.5" fill="#ff5d8f"/><circle cx="112" cy="104" r="2.5" fill="#4dbb8f"/>
+      <path d="M121 48 Q128 30 142 24" fill="none" stroke="#5a7a2a" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="120" cy="58" r="13" fill="#c8102e"/>
+      <ellipse cx="115" cy="53" rx="4" ry="3" fill="#fff" opacity=".6"/>
+    </g>
+  </g>
+  <line x1="160" y1="0" x2="128" y2="250" stroke="#ffffff" stroke-width="10" stroke-linecap="round"/>
+  <line x1="160" y1="0" x2="128" y2="250" stroke="#e5384f" stroke-width="10" stroke-linecap="round" stroke-dasharray="9 14" opacity=".9"/>
+  <polygon points="50,120 190,120 165,290 75,290" fill="#ffffff" opacity=".12"/>
+  <path d="M50 120 L75 290 L165 290 L190 120" fill="none" stroke="var(--glass)" stroke-width="4" stroke-linejoin="round"/>
+  <ellipse cx="120" cy="120" rx="70" ry="9" fill="none" stroke="var(--glass)" stroke-width="3"/>
+  <path d="M66 140 L82 268" stroke="#ffffff" stroke-width="6" stroke-linecap="round" opacity=".45"/>
+</svg>
+<div class="counter"></div>
+<div class="card">
+<div class="status" id="status" aria-live="polite"></div>
+<div class="row" id="flavors"></div>
+<button class="sip" id="sip" type="button"><span class="key">space</span>Sip</button>
+</div>
+<script>
+var F = {
+  v: { n: "Vanilla", a: "#f6e6b8", b: "#e6cf93" },
+  c: { n: "Chocolate", a: "#7d4b34", b: "#5d3624" },
+  s: { n: "Strawberry", a: "#f78fa9", b: "#e86a8d" },
+  m: { n: "Mint", a: "#93e6c8", b: "#62cca7" }
+};
+var cur = "v", level = 6;
+var svg = document.getElementById("shake"), statusEl = document.getElementById("status");
+var row = document.getElementById("flavors");
+
+Object.keys(F).forEach(function (k) {
+  var b = document.createElement("button");
+  b.type = "button"; b.dataset.k = k;
+  b.innerHTML = '<span class="dot" style="background:' + F[k].a + '"></span><span class="key">' + k + "</span>" + F[k].n;
+  b.addEventListener("click", function () { pick(k); });
+  row.appendChild(b);
+});
+
+function render() {
+  var f = F[cur], drop = (6 - level) / 6;
+  svg.style.setProperty("--shake", f.a);
+  svg.style.setProperty("--shake2", f.b);
+  document.getElementById("liquid").style.transform = "translateY(" + (drop * 170) + "px)";
+  document.getElementById("topping").style.transform = "translateY(" + (drop * 150) + "px)";
+  Array.prototype.forEach.call(row.children, function (b) {
+    b.setAttribute("aria-pressed", String(b.dataset.k === cur));
+  });
+  statusEl.textContent = level === 0
+    ? "Glass empty. Pick a flavor to refill."
+    : f.n + (level === 6 ? ", full glass." : ", " + level + " of 6 left.");
+}
+function pick(k) { cur = k; level = 6; render(); }
+function sip() { if (level > 0) { level--; render(); } }
+
+document.getElementById("sip").addEventListener("click", sip);
+document.addEventListener("keydown", function (e) {
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  var k = e.key.toLowerCase();
+  if (F[k]) { pick(k); }
+  else if (e.key === " " && document.activeElement.tagName !== "BUTTON") { e.preventDefault(); sip(); }
+});
+render();
+</script>
+</body>
+</html>
